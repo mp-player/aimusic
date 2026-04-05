@@ -1,2 +1,2 @@
-# aimusic
-AI music player, all collection ai music (Malay/Indo)
+# Ai Music
+All Collection AI Music `Malay|Indo`
