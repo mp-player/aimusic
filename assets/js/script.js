@@ -111,7 +111,7 @@
   async function initPlaylist() {
     const itemList = await playlist;
     itemList.forEach((item, index) => {
-      const {artist, title, file} = item;
+      const {artist, title, album, file} = item;
       const list = document.createElement("div");
       const itemEl = document.createElement("div");
       const titleEl = document.createElement("span");
@@ -130,7 +130,8 @@
       listedEl.classList.add("listed");
       listedEl.setAttribute("data-artist", artist);
       listedEl.setAttribute("data-title", title);
-      listedEl.setAttribute("data-src", file);
+      listedEl.setAttribute("data-album", album);
+      listedEl.setAttribute("data-file", file);
       listedEl.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M16 10.975v13.025l-6-5.269-6 5.269v-24h6.816c-1.123 1.168-1.816 2.752-1.816 4.5 0 3.736 3.162 6.768 7 6.475zm4-6.475c0 2.485-2.018 4.5-4.5 4.5-2.484 0-4.5-2.015-4.5-4.5s2.016-4.5 4.5-4.5c2.482 0 4.5 2.015 4.5 4.5zm-2-.5h-2v-2h-1v2h-2v1h2v2h1v-2h2v-1z"/></svg>';
       list.appendChild(itemEl);
       list.appendChild(listedEl);
@@ -147,7 +148,8 @@
         e.preventDefault();
         const itemArtist = e.target.dataset.artist;
         const itemTitle = e.target.dataset.title;
-        const itemSrc = e.target.dataset.src;
+        const itemAlbum = e.target.dataset.album;
+        const itemFile = e.target.dataset.file;
         if (e.target.classList.contains("mark")) {
           e.target.classList.remove("mark");
           e.target.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M16 10.975v13.025l-6-5.269-6 5.269v-24h6.816c-1.123 1.168-1.816 2.752-1.816 4.5 0 3.736 3.162 6.768 7 6.475zm4-6.475c0 2.485-2.018 4.5-4.5 4.5-2.484 0-4.5-2.015-4.5-4.5s2.016-4.5 4.5-4.5c2.482 0 4.5 2.015 4.5 4.5zm-2-.5h-2v-2h-1v2h-2v1h2v2h1v-2h2v-1z"/></svg>';
@@ -155,7 +157,7 @@
         } else {
           e.target.classList.add("mark");
           e.target.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="orange"><path d="M16 10.975v13.025l-6-5.269-6 5.269v-24h6.816c-1.123 1.168-1.816 2.752-1.816 4.5 0 3.736 3.162 6.768 7 6.475zm4-6.475c0 2.485-2.017 4.5-4.5 4.5s-4.5-2.015-4.5-4.5 2.017-4.5 4.5-4.5 4.5 2.015 4.5 4.5zm-3.086-2.122l-1.414 1.414-1.414-1.414-.707.708 1.414 1.414-1.414 1.414.707.708 1.414-1.415 1.414 1.414.708-.708-1.414-1.413 1.414-1.414-.708-.708z"/></svg>';
-          manageData("push", {artist: itemArtist, title: itemTitle, src: itemSrc});
+          manageData("push", {artist: itemArtist, title: itemTitle, album: itemAlbum, file: itemFile});
         }
       });
     });
@@ -185,7 +187,7 @@
     const itemBookmark = document.querySelectorAll(".playlist-bookmark .list");
     if (itemStore) {
       itemStore.forEach((item, index) => {
-        const {src, title, artist} = item;
+        const {artist, title} = item;
         const list = document.createElement("div");
         const itemEl = document.createElement("div");
         const titleEl = document.createElement("span");
@@ -193,7 +195,6 @@
         list.classList.add("list");
         list.setAttribute("data-id", index);
         list.setAttribute("data-song", `${artist} - ${title}`);
-        list.setAttribute("data-src", src);
         itemEl.classList.add("item");
         titleEl.classList.add("title");
         artistEl.classList.add("artist");
@@ -244,7 +245,7 @@
     if (action && item) {
       let data = JSON.parse(itemStore) || [];
       switch (action) {
-        case "push": data.push({src: item.src, title: item.title, artist: item.artist});
+        case "push": data.push({artist: item.artist, title: item.title, album: item.album, file: item.file});
           break;
         case "delete": data = data.filter(i => i.title !== item.title);
           break;
@@ -279,57 +280,55 @@
 
   function getIndex(index) {
     if (!audioPlayer.paused) audioPlayer.pause();
-    audioPlayer.currentTime = 0;
     loadSong(index);
   }
 
   function loadSong(index) {
-    let file;
+    let artist, title, album, file;
+    const itemStore = manageData().get("item-store");
     if (!playlistSong.classList.contains("hidden")) {
       if (index < 0 || index >= playlist.length) return;
+      artist = playlist[index].artist;
+      title = playlist[index].title;
+      album = playlist[index].album;
       file = playlist[index].file;
     } else if (!playlistBookmark.classList.contains("hidden")) {
-      const itemStore = manageData().get("item-store");
       if (index < 0 || index >= itemStore.length) return;
-      file = itemStore[index].src;
+      artist = itemStore[index].artist;
+      title = itemStore[index].title;
+      album = itemStore[index].album;
+      file = itemStore[index].file;
     }
+    const currentSong = `${artist} - ${title}`;
+    currentSongEl.setAttribute("data-playing", currentSong);
+    currentSongEl.innerHTML = `<span>🎵 &nbsp; ${artist} - ${title}</span><span class="album">${album}</span>`;
+    const itemList1 = document.querySelectorAll(".playlist-song .list");
+    itemList1.forEach((list) => {
+      if (list.dataset.song.match(currentSong)) {
+        list.classList.add("active");
+        list.scrollIntoView({block: "center", behavior: "smooth"});
+      } else {
+        list.classList.remove("active");
+      }
+    });
+    const itemList2 = document.querySelectorAll(".playlist-bookmark .list");
+    itemList2.forEach((list) => {
+      if (list.dataset.song.match(currentSong)) {
+        list.classList.add("active");
+        list.scrollIntoView({block: "center", behavior: "smooth"});
+      } else {
+        list.classList.remove("active");
+      }
+    });
     const songUrl = `${window.atob("aHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL21wLXBsYXllci9haW11c2ljQG1hc3Rlci9hdWRpby9tdXNpYy8=")}${encodeURIComponent(file)}`;
     const baseUrl = new URL(`audio/music/${encodeURIComponent(file)}`, location.href).href;
     getSource(songUrl).then((isActive) => {
       const source = isActive ? songUrl : baseUrl;
       if (source) {
         audioLoad(source);
-        getMP3Tags(source, (tags) => {
-          if (tags) {
-            const artist = tags.TPE1;
-            const title = tags.TIT2;
-            const album = tags.TALB;
-            const currentSong = `${artist} - ${title}`;
-            currentSongEl.setAttribute("data-playing", currentSong);
-            currentSongEl.innerHTML = `<span>🎵 &nbsp; ${artist} - ${title}</span><span class="album">${album}</span>`;
-            labelSong.textContent = `${currentSong}.mp3`;
-            downloadFile.setAttribute("data-src", source);
-            downloadFile.setAttribute("data-title", `${currentSong}.mp3`);
-            const itemList1 = document.querySelectorAll(".playlist-song .list");
-            itemList1.forEach((list) => {
-              if (list.dataset.song.match(currentSong)) {
-                list.classList.add("active");
-                list.scrollIntoView({block: "center", behavior: "smooth"});
-              } else {
-                list.classList.remove("active");
-              }
-            });
-            const itemList2 = document.querySelectorAll(".playlist-bookmark .list");
-            itemList2.forEach((list) => {
-              if (list.dataset.song.match(currentSong)) {
-                list.classList.add("active");
-                list.scrollIntoView({block: "center", behavior: "smooth"});
-              } else {
-                list.classList.remove("active");
-              }
-            });
-          }
-        });
+        labelSong.textContent = `${currentSong}.mp3`;
+        downloadFile.setAttribute("data-src", source);
+        downloadFile.setAttribute("data-title", `${currentSong}.mp3`);
       }
     });
   }
