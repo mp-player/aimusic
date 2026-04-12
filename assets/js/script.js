@@ -439,19 +439,54 @@
 
   downloadFile.addEventListener("click", (e) => {
     e.preventDefault();
-    const target = e.target;
-    const a = document.createElement("a");
-    a.href = target.dataset.src;
-    a.download = target.dataset.title;
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    const file = e.target.dataset.src;
+    const fileName = e.target.dataset.title;
+    downloadContentFiles(file, fileName);
     setTimeout(() => {
       downloadBox.classList.remove("display");
       overlay.classList.remove("display");
     }, 5000);
   });
+
+  async function downloadContentFiles(file, fileName) {
+    try {
+      let blob;
+      if (file instanceof Blob) {
+        blob = file;
+      } else if (typeof file === "string") {
+        const response = await fetch(file, {mode: "cors"});
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        blob = await response.blob();
+      } else {
+        throw new Error("Invalid file type. Must be a Blob or URL string.");
+      }
+      const blobURL = URL.createObjectURL(blob);
+      const windowTab = window.open("", "_blank");
+      if (!windowTab) {
+        alert("Popup disekat! Sila benarkan popup untuk tapak ini.");
+        URL.revokeObjectURL(blobURL);
+        return;
+      }
+      windowTab.document.write(`
+        <html>
+          <body>
+            <a id="dl" href="${blobURL}" download="${fileName}"></a>
+            <script>
+              document.getElementById("dl").click();
+              window.close();
+            <\/script>
+          </body>
+        </html>
+      `);
+      windowTab.document.close();
+      setTimeout(() => {
+        URL.revokeObjectURL(blobURL);
+      }, 10000);
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("Gagal memuat turun fail audio: " + error.message);
+    }
+  }
 
   overlay.addEventListener("click", (e) => {
     e.preventDefault();
