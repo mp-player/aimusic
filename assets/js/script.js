@@ -324,13 +324,10 @@
     const baseUrl = new URL(`audio/music/${encodeURIComponent(file)}`, location.href).href;
     getSource(songUrl).then((isActive) => {
       const source = isActive ? songUrl : baseUrl;
-      if (source) {
-        audioLoad(source);
-        labelSong.textContent = `${currentSong}.mp3`;
-        downloadFile.setAttribute("data-src", source);
-        downloadFile.setAttribute("data-title", `${currentSong}.mp3`);
-      }
+      if (source) audioLoad(source);
     });
+    labelSong.textContent = `${currentSong}.mp3`;
+    downloadFile.setAttribute("data-title", `${currentSong}.mp3`);
   }
 
   async function getSource(url) {
@@ -439,52 +436,20 @@
 
   downloadFile.addEventListener("click", (e) => {
     e.preventDefault();
-    const file = e.target.dataset.src;
-    const fileName = e.target.dataset.title;
-    downloadContentFiles(file, fileName);
+    downloadContentFiles(e.target.dataset.title);
     setTimeout(() => {
       downloadBox.classList.remove("display");
       overlay.classList.remove("display");
     }, 5000);
   });
 
-  async function downloadContentFiles(file, fileName) {
-    try {
-      let blob;
-      if (file instanceof Blob) {
-        blob = file;
-      } else if (typeof file === "string") {
-        const response = await fetch(file, {mode: "cors"});
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        blob = await response.blob();
-      } else {
-        throw new Error("Invalid file type. Must be a Blob or URL string.");
-      }
-      const blobURL = URL.createObjectURL(blob);
-      const windowTab = window.open("", "_blank");
-      if (!windowTab) {
-        alert("Popup disekat! Sila benarkan popup untuk tapak ini.");
-        URL.revokeObjectURL(blobURL);
-        return;
-      }
-      windowTab.document.write(`
-        <html>
-          <body>
-            <a id="dl" href="${blobURL}" download="${fileName}"></a>
-            <script>
-              document.getElementById("dl").click();
-              window.close();
-            <\/script>
-          </body>
-        </html>
-      `);
-      windowTab.document.close();
-      setTimeout(() => {
-        URL.revokeObjectURL(blobURL);
-      }, 10000);
-    } catch (error) {
-      console.error("Download failed:", error);
-      alert("Gagal memuat turun fail audio: " + error.message);
+  function downloadContentFiles(fileName) {
+    const shareURL = "https://raw.githubusercontent.com/mp-player/aimusic/refs/heads/master/";
+    const audioURL = new URL(`audio/music/${encodeURIComponent(fileName)}`, shareURL).href;
+    const windowTab = window.open(audioURL);
+    if (!windowTab) {
+      alert("Popup disekat! Sila benarkan popup untuk tapak ini.");
+      return;
     }
   }
 
